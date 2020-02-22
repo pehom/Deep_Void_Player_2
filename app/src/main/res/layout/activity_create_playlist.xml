@@ -31,7 +31,8 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:padding="13dp"
-            android:src="@drawable/ic_done_accent_24dp"/>
+            android:src="@drawable/ic_done_accent_24dp"
+            android:onClick="createPlaylist"/>
 
     </LinearLayout>
 

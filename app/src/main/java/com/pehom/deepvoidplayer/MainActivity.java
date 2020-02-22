@@ -514,7 +514,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void createPlaylist(View view) {
+    public void addPlaylist(View view) {
         Intent intent = new Intent(MainActivity.this, CreatePlaylistActivity.class);
         startActivity(intent);
     }

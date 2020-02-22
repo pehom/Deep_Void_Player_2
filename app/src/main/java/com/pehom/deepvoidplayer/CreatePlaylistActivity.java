@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -39,7 +40,7 @@ public class CreatePlaylistActivity extends AppCompatActivity {
         setContentView(R.layout.activity_create_playlist);
         random = new Random();
         chosenTracksRecyclerView = findViewById(R.id.chosenTracks);
-        newPlaylistArrayList = new ArrayList<>();
+       /* newPlaylistArrayList = new ArrayList<>();
         RecyclerView.LayoutManager trackLayoutManager = new LinearLayoutManager(this);
         newPlaylistTrackAdapter = new TrackAdapter(newPlaylistArrayList, new TrackAdapter.OnTrackTouchListener() {
             @Override
@@ -69,9 +70,8 @@ public class CreatePlaylistActivity extends AppCompatActivity {
             }
         });
         chosenTracksRecyclerView.setLayoutManager(trackLayoutManager);
-        chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);
+        chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);*/
 
-        playlistTitleEditText = findViewById(R.id.playlistTitleEditText);
         showArtists();
 
     }
@@ -134,7 +134,7 @@ public class CreatePlaylistActivity extends AppCompatActivity {
                        stopx = event.getRawX();
                        Log.d("mylog", "stopx = " + stopx);
 
-                       if (startx - stopx >  100) {
+                       if (startx - stopx >  80) {
                            Log.d("mylog", "startx = " + startx + "  stopx = " + stopx);
                            addThisArtistTracks(position);
                            v.animate()
@@ -321,7 +321,7 @@ public class CreatePlaylistActivity extends AppCompatActivity {
                         break;
                     case MotionEvent.ACTION_UP: // отпускание
                         stopx = event.getX();
-                        if (startx - stopx >  100) {
+                        if (startx - stopx >  80) {
                             v.animate()
                                     .x(startx + dX)
                                     .setDuration(0)
@@ -438,30 +438,56 @@ public class CreatePlaylistActivity extends AppCompatActivity {
         newPlaylistTrackAdapter = new TrackAdapter(newPlaylistArrayList, new TrackAdapter.OnTrackTouchListener() {
             @Override
             public void onTrackTouch(View v, MotionEvent event, int position) {
-                switch (event.getAction()) {
+                switch (event.getAction()) { // new playlist editing
                     case MotionEvent.ACTION_DOWN: // нажатие
-                        startx = event.getX();
+                        startx = event.getRawX();
+                        dX = v.getX() - event.getRawX();
                         break;
                     case MotionEvent.ACTION_MOVE: // движение
-
+                        if (event.getRawX() > startx) {
+                            v.animate()
+                                    .x(event.getRawX() + dX)
+                                    .setDuration(0)
+                                    .start();
+                        }
                         break;
                     case MotionEvent.ACTION_UP: // отпускание
-                        stopx = event.getX();
+                        stopx = event.getRawX();
+                        Log.d("mylog", "startx = " + startx + "  stopx = " + stopx);
+
+                        if (stopx - startx >  80 && stopx!=0) {
+                            newPlaylistArrayList.remove(position);
+                            chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);
+
+                        }else {
+                            v.animate()
+                                    .x(0)
+                                    .setDuration(0)
+                                    .start();
+                        }
                         break;
                     case MotionEvent.ACTION_CANCEL:
-                        stopx = startx;
+                        v.animate()
+                                .x(0)
+                                .setDuration(0)
+                                .start();
                         break;
-                }
-                if (stopx - startx >  80 && stopx!=0) {
-                    Log.d("mylog", "startx = " + startx + "  stopx = " + stopx);
-                    newPlaylistArrayList.remove(position);
-                    chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);
-                    startx=0;
-                    stopx=0;
                 }
             }
         });
         chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);
 
+    }
+
+    public void createPlaylist(View view) {
+        playlistTitleEditText = findViewById(R.id.playlistTitleEditText);
+
+        String playlistTitle = playlistTitleEditText.getText().toString().trim();
+        if (newPlaylistArrayList.size() > 0) {
+            Playlist newPlaylist = new Playlist(playlistTitle, 0, newPlaylistArrayList);
+            File playlistsDirectory = getApplicationContext().getFilesDir();
+            File file = new File(playlistsDirectory, playlistTitle);
+            file.wr
+        }
     }
 }
