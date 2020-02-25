@@ -4,6 +4,7 @@
     <color name="colorPrimaryDark">#1C1426</color>
     <color name="colorAccent">#DE2438</color>
     <color name="colorAccentFaded">#80DE2438</color>
-
+    <color name="colorPointer">#DFA9AE</color>
+    <color name="colorBackground">#1F1425</color>
 
 </resources>

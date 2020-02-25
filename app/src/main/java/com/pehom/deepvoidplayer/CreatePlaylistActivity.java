@@ -3,9 +3,13 @@ package com.pehom.deepvoidplayer;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.room.Room;
+import androidx.room.RoomDatabase;
 
 import android.content.ContentResolver;
+import android.content.Intent;
 import android.database.Cursor;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -29,50 +33,76 @@ public class CreatePlaylistActivity extends AppCompatActivity {
     private TrackAdapter newPlaylistTrackAdapter;
 
     private LinearLayoutManager artistsLayoutManager;
+    private RecyclerView.LayoutManager trackLayoutManager;
     private ArtistsAdapter artistsAdapter;
     private float startx, stopx;
     private Random random;
     private float dX;
+    private long receivedPlaylistId = 0;
+    private Playlist receivedPlaylist;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_playlist);
+        newPlaylistArrayList = new ArrayList<>();
         random = new Random();
         chosenTracksRecyclerView = findViewById(R.id.chosenTracks);
-       /* newPlaylistArrayList = new ArrayList<>();
-        RecyclerView.LayoutManager trackLayoutManager = new LinearLayoutManager(this);
-        newPlaylistTrackAdapter = new TrackAdapter(newPlaylistArrayList, new TrackAdapter.OnTrackTouchListener() {
-            @Override
-            public void onTrackTouch(View v, MotionEvent event, int position) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN: // нажатие
-                        startx = event.getX();
-                        break;
-                    case MotionEvent.ACTION_MOVE: // движение
-
-                        break;
-                    case MotionEvent.ACTION_UP: // отпускание
-                        stopx = event.getX();
-                        break;
-                    case MotionEvent.ACTION_CANCEL:
-                        stopx = startx;
-                        break;
-                }
-                if (stopx - startx >  80 && stopx!=0) {
-                    Log.d("mylog", "startx = " + startx + "  stopx = " + stopx);
-                    newPlaylistArrayList.remove(position);
-                    chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);
-
-                    startx=0;
-                    stopx=0;
-                }
-            }
-        });
+        trackLayoutManager = new LinearLayoutManager(this);
         chosenTracksRecyclerView.setLayoutManager(trackLayoutManager);
-        chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);*/
-
         showArtists();
+        Intent intent = getIntent();
+        receivedPlaylistId = intent.getLongExtra("playlistId", 0);
+        Log.d("mylog", "playlistId received = " + receivedPlaylistId);
+        if (receivedPlaylistId > 0) {
+            PlaylistsDatabase playlistsDatabase = Room.databaseBuilder(getApplicationContext(),
+                    PlaylistsDatabase.class, "PlaylistsDB").allowMainThreadQueries().build();
+            receivedPlaylist = playlistsDatabase.getPlaylistDAO().getPlaylist(receivedPlaylistId);
+            newPlaylistArrayList = receivedPlaylist.getTracks();
+            newPlaylistTrackAdapter = new TrackAdapter(newPlaylistArrayList, new TrackAdapter.OnTrackTouchListener() {
+                @Override
+                public void onTrackTouch(View v, MotionEvent event, int position) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN: // нажатие
+                            startx = event.getRawX();
+                            dX = v.getX() - event.getRawX();
+                            break;
+                        case MotionEvent.ACTION_MOVE: // движение
+                            if (event.getRawX() > startx) {
+                                v.animate()
+                                        .x(event.getRawX() + dX)
+                                        .setDuration(0)
+                                        .start();
+                            }
+                            break;
+                        case MotionEvent.ACTION_UP: // отпускание
+                            stopx = event.getRawX();
+                            Log.d("mylog", "startx = " + startx + "  stopx = " + stopx);
+
+                            if (stopx - startx >  80 && stopx!=0) {
+                                newPlaylistArrayList.remove(position);
+                                chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);
+
+                            }else {
+                                v.animate()
+                                        .x(0)
+                                        .setDuration(0)
+                                        .start();
+                            }
+                            break;
+                        case MotionEvent.ACTION_CANCEL:
+                            v.animate()
+                                    .x(0)
+                                    .setDuration(0)
+                                    .start();
+                            break;
+                    }
+                }
+            });
+            chosenTracksRecyclerView.setAdapter(newPlaylistTrackAdapter);
+            playlistTitleEditText = findViewById(R.id.playlistTitleEditText);
+            playlistTitleEditText.setText(receivedPlaylist.getPlaylistTitle());
+        }
 
     }
 
@@ -83,7 +113,6 @@ public class CreatePlaylistActivity extends AppCompatActivity {
 
         String[] mProjection =
                 {
-
                         MediaStore.Audio.Artists.ARTIST,
                         MediaStore.Audio.Artists.NUMBER_OF_TRACKS,
                         MediaStore.Audio.Artists.ARTIST_KEY
@@ -481,13 +510,31 @@ public class CreatePlaylistActivity extends AppCompatActivity {
 
     public void createPlaylist(View view) {
         playlistTitleEditText = findViewById(R.id.playlistTitleEditText);
+        PlaylistsDatabase playlistsDatabase = Room.databaseBuilder(getApplicationContext(),
+                PlaylistsDatabase.class, "PlaylistsDB").allowMainThreadQueries().build();
 
         String playlistTitle = playlistTitleEditText.getText().toString().trim();
         if (newPlaylistArrayList.size() > 0) {
-            Playlist newPlaylist = new Playlist(playlistTitle, 0, newPlaylistArrayList);
-            File playlistsDirectory = getApplicationContext().getFilesDir();
-            File file = new File(playlistsDirectory, playlistTitle);
-            file.wr
+            Log.d("mylog", "addButton pressed receivedPlaylistId = " + receivedPlaylistId);
+
+            if (receivedPlaylistId > 0) {
+                    receivedPlaylist.setTracks(newPlaylistArrayList);
+                    playlistsDatabase.getPlaylistDAO().updatePlaylist(receivedPlaylist);
+                    Log.d("mylog", "playlist has been updated");
+                } else {
+                    Playlist newPlaylist = new Playlist(0, playlistTitle, 0, newPlaylistArrayList);
+
+                    playlistsDatabase.getPlaylistDAO().addPlaylist(newPlaylist);
+                    Log.d("mylog", "playlist has been added");
+                }
+
+        startActivity(new Intent(CreatePlaylistActivity.this, MainActivity.class));
+
         }
+    }
+
+    public void stopMediaPlayer(){
+        MediaPlayer mediaPlayer = new MediaPlayer();
+        if (mediaPlayer.isPlaying()) mediaPlayer.stop();
     }
 }

@@ -36,116 +36,70 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="3"
+        android:layout_weight="2"
         android:orientation="horizontal"
         android:layout_marginLeft="14dp"
         android:layout_marginRight="14dp"
         android:layout_marginTop="7dp">
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="2"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+
             <ImageView
                 android:id="@+id/imageViewPrev"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="4"
+                android:layout_width="0dp"
+                android:layout_weight="2"
+                android:layout_height="match_parent"
                 android:onClick="prevTrack"
                 android:src="@drawable/ic_skip_previous_red"
+                android:layout_marginRight="10dp"
                 />
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"/>
-        </LinearLayout>
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+
+
             <ImageView
                 android:id="@+id/shuffleImageView"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="4"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
                 android:onClick="changeShuffleMode"
-                android:padding="5dp"
+
                 android:src="@drawable/ic_shuffle_accent_faded_24dp"
+                android:layout_marginRight="10dp"
+                android:layout_marginLeft="10dp"
                 />
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"/>
 
-        </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="3"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+
             <ImageView
                 android:id="@+id/imageViewPlay"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="4"
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="match_parent"
                 android:onClick="play"
                 android:src="@drawable/ic_play_arrow_red"
+                android:layout_marginRight="10dp"
+                android:layout_marginLeft="10dp"
                 />
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"/>
-        </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
             <ImageView
                 android:id="@+id/loopImageView"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="4"
-                android:padding="5dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+
                 android:onClick="changeLoopMode"
                 android:src="@drawable/ic_repeat_red_faded_24dp"
+                android:layout_marginRight="10dp"
+                android:layout_marginLeft="10dp"
                 />
-            <TextView
-                android:id="@+id/loopModeTextView"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:text="TextView"
-                android:textSize="10sp"
-                android:textAlignment="center"
-                android:textColor="@color/colorAccent"
-                />
-        </LinearLayout>
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="2"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+
             <ImageView
                 android:id="@+id/imageViewNext"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="4"
+                android:layout_width="0dp"
+                android:layout_weight="2"
+                android:layout_height="match_parent"
                 android:onClick="nextTrack"
                 android:src="@drawable/ic_skip_next_red"
+
+                android:layout_marginLeft="10dp"
                 />
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"/>
-
-        </LinearLayout>
-
-
-
 
     </LinearLayout>
     <LinearLayout
@@ -156,7 +110,34 @@
         android:orientation="vertical"
         android:layout_marginLeft="14dp"
         android:layout_marginRight="14dp"
+        android:layout_marginTop="10dp"
+        android:visibility="invisible"
+        android:background="@color/colorBackground"
         >
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="7"
+                android:textColor="@color/colorAccent"
+                android:text="Playlists:"
+                android:autoSizeTextType="uniform"
+
+                android:gravity="start" />
+            <ImageView
+                android:id="@+id/createPlaylistImageView"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:src="@drawable/ic_add_accent_24dp"
+                android:onClick="addPlaylist"/>
+        </LinearLayout>
+
+
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/choosePlaylistRecyclerView"
@@ -166,36 +147,6 @@
 
             android:layout_marginTop="10dp"
             />
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:textColor="@color/colorAccent"
-
-                android:textAlignment="textEnd"
-                android:autoSizeTextType="uniform"
-                android:layout_weight="4"
-                android:gravity="end" />
-            <ImageView
-            android:id="@+id/deletePlaylist"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-                android:src="@drawable/ic_remove_accent_24dp"/>
-            <ImageView
-                android:id="@+id/createPlaylist"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:src="@drawable/ic_add_accent_24dp"
-                android:onClick="addPlaylist"/>
-        </LinearLayout>
-
-
 
     </LinearLayout>
 
@@ -219,7 +170,7 @@
             android:textStyle="bold"
             android:textColor="@color/colorAccent" />
         <TextView
-            android:id="@+id/playlistTitleTextView"
+            android:id="@+id/queueTitleTextView"
             android:layout_width="0dp"
             android:layout_weight="7"
             android:layout_height="match_parent"

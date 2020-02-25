@@ -144,11 +144,9 @@
         </LinearLayout>
 
     </LinearLayout>
-   <!-- <TextView
-        android:id="@+id/testTextView"
+    <Button
         android:layout_width="match_parent"
-        android:textColor="@color/colorAccent"
-        android:textSize="16sp"
-        android:layout_height="0dp"
-        android:layout_weight="6"/>-->
+        android:layout_height="wrap_content"
+        android:text="stop mediaplayer"
+        android:onClick="stopMediaPlayer"/>
 </LinearLayout>

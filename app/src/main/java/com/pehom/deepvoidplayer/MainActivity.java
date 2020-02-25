@@ -1,12 +1,13 @@
 package com.pehom.deepvoidplayer;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.LinearLayoutCompat;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.room.Room;
 
 import android.Manifest;
 import android.content.ContentResolver;
@@ -19,11 +20,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PersistableBundle;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -41,26 +42,30 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer mediaPlayer;
     private ImageView playPauseIcon;
     private SeekBar seekbar;
-    private ArrayList<Track> playlistArrayList;
-    private RecyclerView.LayoutManager trackLayoutManager;
-    private RecyclerView playlistRecyclerView;
+    private ArrayList<Track> queueArrayList;
+    private RecyclerView.LayoutManager queueLayoutManager;
+    private RecyclerView queueRecyclerView;
+    private RecyclerView choosePlaylistRecyclerView;
+    private PlaylistAdapter choosePlaylistAdapter;
     private TextView currentTrackTextView;
-    private TrackAdapter playlistAdapter;
+    private TrackAdapter queueAdapter;
     private Handler currentTrackPositionHandler;
 
-    private int currentPlaylistItemPosition = 0;
+    private int currentQueueItemPosition = 0;
     private String currentTrackProgress;
+    private String currentTrackTitle;
     private LinearLayout choosePlaylistLinearLayout;
     private ImageView shuffleImageView;
     private boolean isShuffleModeOn = false;
     private ArrayList<Integer> shuffledTracks;
     private ImageView loopImageView;
-    private TextView loopModeTextView;
+
     private int loopMode = 0;
     Random random;
-    boolean choosePlaylistLinearLayoutIsVisible =  false;
+    boolean choosePlaylistIsVisible =  false;
     private  float startx, stopx;
-    private float dX, dY;
+    private float dX;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,9 +76,7 @@ public class MainActivity extends AppCompatActivity {
         currentTrackTextView = findViewById(R.id.currentTrackTextView);
         seekbar = findViewById(R.id.seekBar);
         loopImageView = findViewById(R.id.loopImageView);
-        loopModeTextView = findViewById(R.id.loopModeTextView);
-        loopModeTextView.setVisibility(View.INVISIBLE);
-        playlistArrayList = new ArrayList<Track>();
+        queueArrayList = new ArrayList<Track>();
         currentTrackPositionHandler = new Handler(){
             @Override
             public void handleMessage(Message msg) {
@@ -81,8 +84,8 @@ public class MainActivity extends AppCompatActivity {
                 int sec = msg.what/1000 - min*60;
                 if (sec < 10) {currentTrackProgress = ""+ min + ":0" + sec;}
                 else {currentTrackProgress = ""+ min + ":" + sec;}
-                currentTrackTextView.setText(playlistArrayList.get(currentPlaylistItemPosition).getArtist()
-                        + " - " + playlistArrayList.get(currentPlaylistItemPosition).getTitle() + "  " + currentTrackProgress);
+
+                currentTrackTextView.setText(currentTrackTitle + "  " + currentTrackProgress);
 
             }
         };
@@ -100,18 +103,13 @@ public class MainActivity extends AppCompatActivity {
         } else {
             doStuff();
         }
-
-
-
     }
 
     public void doStuff(){
         getMusic();
-        playlistRecyclerView = findViewById(R.id.playlistRecyclerView);
-       // playlistRecyclerView.setHasFixedSize(true);
-
-        trackLayoutManager = new LinearLayoutManager(this);
-        playlistAdapter = new TrackAdapter(playlistArrayList, new TrackAdapter.OnTrackTouchListener() {
+        queueRecyclerView = findViewById(R.id.playlistRecyclerView);
+        queueLayoutManager = new LinearLayoutManager(this);
+        queueAdapter = new TrackAdapter(queueArrayList, new TrackAdapter.OnTrackTouchListener() {
             @Override
             public void onTrackTouch(View v, MotionEvent event, int position) {
                 switch (event.getAction()) {
@@ -134,9 +132,9 @@ public class MainActivity extends AppCompatActivity {
                      //   if (stopx < startx) break;
 
                         if (stopx - startx >  150 && stopx!=0) {
-                            Log.d("mylog", "removed: " +playlistArrayList.get(position).getArtist() + "  " + playlistArrayList.get(position).getTitle());
-                            playlistArrayList.remove(position);
-                            playlistRecyclerView.setAdapter(playlistAdapter);
+                            Log.d("mylog", "removed: " + queueArrayList.get(position).getArtist() + "  " + queueArrayList.get(position).getTitle());
+                            queueArrayList.remove(position);
+                            queueRecyclerView.setAdapter(queueAdapter);
 
                         } else if (stopx != startx) {
                             v.animate()
@@ -146,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         else  {
                             Log.d("mylog", "playtheposition");
-                            currentPlaylistItemPosition = position;
+                            currentQueueItemPosition = position;
                             playThePosition(position);
 
                         }
@@ -163,8 +161,8 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        playlistRecyclerView.setLayoutManager(trackLayoutManager);
-        playlistRecyclerView.setAdapter(playlistAdapter);
+        queueRecyclerView.setLayoutManager(queueLayoutManager);
+        queueRecyclerView.setAdapter(queueAdapter);
 
     }
 
@@ -193,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
                 currentTrack.setTitle(currentTitle);
                 currentTrack.setDuration(currentDuration);
                 currentTrack.setData(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA)));
-                playlistArrayList.add(currentTrack);
+                queueArrayList.add(currentTrack);
 
             } while (cursor.moveToNext());
         }
@@ -222,16 +220,16 @@ public class MainActivity extends AppCompatActivity {
         if (isShuffleModeOn) {
             if (shuffledTracks.size()>1) {
                 Random random = new Random();
-                currentPlaylistItemPosition = random.nextInt(shuffledTracks.size());
-                shuffledTracks.remove(currentPlaylistItemPosition);
-                playThePosition(currentPlaylistItemPosition);
+                currentQueueItemPosition = random.nextInt(shuffledTracks.size());
+                shuffledTracks.remove(currentQueueItemPosition);
+                playThePosition(currentQueueItemPosition);
             }
 
 
         } else {
-            if (currentPlaylistItemPosition < playlistArrayList.size()-1) {
-                currentPlaylistItemPosition++;
-                playThePosition(currentPlaylistItemPosition);
+            if (currentQueueItemPosition < queueArrayList.size()-1) {
+                currentQueueItemPosition++;
+                playThePosition(currentQueueItemPosition);
             } else playPauseIcon.setImageResource(R.drawable.ic_play_arrow_red);
         }
     }
@@ -240,16 +238,16 @@ public class MainActivity extends AppCompatActivity {
         if (isShuffleModeOn) {
             if (shuffledTracks.size()>1) {
                 Random random = new Random();
-                currentPlaylistItemPosition = random.nextInt(shuffledTracks.size());
-                shuffledTracks.remove(currentPlaylistItemPosition);
-                playThePosition(currentPlaylistItemPosition);
+                currentQueueItemPosition = random.nextInt(shuffledTracks.size());
+                shuffledTracks.remove(currentQueueItemPosition);
+                playThePosition(currentQueueItemPosition);
             }
 
 
         } else {
-            if (currentPlaylistItemPosition > 0) {
-                currentPlaylistItemPosition--;
-                playThePosition(currentPlaylistItemPosition);
+            if (currentQueueItemPosition > 0) {
+                currentQueueItemPosition--;
+                playThePosition(currentQueueItemPosition);
 
             }
         }
@@ -259,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public void play(View view) {
         if (mediaPlayer == null) {
-            playThePosition(currentPlaylistItemPosition);
+            playThePosition(currentQueueItemPosition);
             playPauseIcon.setImageResource(R.drawable.ic_pause_red);
         } else {
             if (mediaPlayer.isPlaying()) {
@@ -273,12 +271,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void playThePosition(int position){
-        currentPlaylistItemPosition = position;
+        currentQueueItemPosition = position;
         if (mediaPlayer == null || !mediaPlayer.isPlaying()) {
             mediaPlayer = new MediaPlayer();
 
             try {
-                mediaPlayer.setDataSource(playlistArrayList.get(position).getData());
+                mediaPlayer.setDataSource(queueArrayList.get(position).getData());
+                currentTrackTitle = queueArrayList.get(position).getArtist() + "  " + queueArrayList.get(position).getTitle();
                 mediaPlayer.prepare();
                 mediaPlayer.start();
                 mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
@@ -288,42 +287,42 @@ public class MainActivity extends AppCompatActivity {
                             case 0:
                                     if (isShuffleModeOn) {
                                         if (shuffledTracks.size()>1) {
-                                            currentPlaylistItemPosition = random.nextInt(shuffledTracks.size());
-                                            shuffledTracks.remove(currentPlaylistItemPosition);
-                                            playThePosition(currentPlaylistItemPosition);
+                                            currentQueueItemPosition = random.nextInt(shuffledTracks.size());
+                                            shuffledTracks.remove(currentQueueItemPosition);
+                                            playThePosition(currentQueueItemPosition);
                                         }
 
                                     } else {
-                                        if (currentPlaylistItemPosition < playlistArrayList.size()-1) {
-                                            currentPlaylistItemPosition++;
-                                            playThePosition(currentPlaylistItemPosition);
+                                        if (currentQueueItemPosition < queueArrayList.size()-1) {
+                                            currentQueueItemPosition++;
+                                            playThePosition(currentQueueItemPosition);
                                         } else playPauseIcon.setImageResource(R.drawable.ic_play_arrow_red);
                                     }
                                     break;
                             case 1:
-                                    playThePosition(currentPlaylistItemPosition);
+                                    playThePosition(currentQueueItemPosition);
                                     break;
                             case 2:
                                     if (isShuffleModeOn) {
                                         if (shuffledTracks.size()>1) {
-                                            currentPlaylistItemPosition = random.nextInt(shuffledTracks.size());
-                                            shuffledTracks.remove(currentPlaylistItemPosition);
-                                            playThePosition(currentPlaylistItemPosition);
+                                            currentQueueItemPosition = random.nextInt(shuffledTracks.size());
+                                            shuffledTracks.remove(currentQueueItemPosition);
+                                            playThePosition(currentQueueItemPosition);
                                         } else {
-                                            for (int i=0;i<playlistArrayList.size();i++) shuffledTracks.add(i);
-                                            currentPlaylistItemPosition = random.nextInt(shuffledTracks.size());
-                                            shuffledTracks.remove(currentPlaylistItemPosition);
-                                            playThePosition(currentPlaylistItemPosition);
+                                            for (int i = 0; i< queueArrayList.size(); i++) shuffledTracks.add(i);
+                                            currentQueueItemPosition = random.nextInt(shuffledTracks.size());
+                                            shuffledTracks.remove(currentQueueItemPosition);
+                                            playThePosition(currentQueueItemPosition);
                                         }
 
 
                                     } else {
-                                        if (currentPlaylistItemPosition < playlistArrayList.size()-1) {
-                                            currentPlaylistItemPosition++;
-                                            playThePosition(currentPlaylistItemPosition);
+                                        if (currentQueueItemPosition < queueArrayList.size()-1) {
+                                            currentQueueItemPosition++;
+                                            playThePosition(currentQueueItemPosition);
                                         } else {
-                                            currentPlaylistItemPosition = 0;
-                                            playThePosition(currentPlaylistItemPosition);
+                                            currentQueueItemPosition = 0;
+                                            playThePosition(currentQueueItemPosition);
                                         }
                                     }
                                     break;
@@ -366,13 +365,15 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
-         //   currentTrackTextView.setText(playlistArrayList.get(position).getArtist() + " - " + playlistArrayList.get(position).getTitle());
+         //   currentTrackTextView.setText(queueArrayList.get(position).getArtist() + " - " + queueArrayList.get(position).getTitle());
         } else {
             mediaPlayer.stop();
             mediaPlayer.release();
             mediaPlayer = new MediaPlayer();
             try {
-                mediaPlayer.setDataSource(playlistArrayList.get(position).getData());
+                mediaPlayer.setDataSource(queueArrayList.get(position).getData());
+                currentTrackTitle = queueArrayList.get(position).getArtist() + "  " + queueArrayList.get(position).getTitle();
+
                 mediaPlayer.prepare();
                 mediaPlayer.start();
                 mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
@@ -382,42 +383,42 @@ public class MainActivity extends AppCompatActivity {
                             case 0:
                                 if (isShuffleModeOn) {
                                     if (shuffledTracks.size()>1) {
-                                        currentPlaylistItemPosition = random.nextInt(shuffledTracks.size());
-                                        shuffledTracks.remove(currentPlaylistItemPosition);
-                                        playThePosition(currentPlaylistItemPosition);
+                                        currentQueueItemPosition = random.nextInt(shuffledTracks.size());
+                                        shuffledTracks.remove(currentQueueItemPosition);
+                                        playThePosition(currentQueueItemPosition);
                                     }
 
                                 } else {
-                                    if (currentPlaylistItemPosition < playlistArrayList.size()-1) {
-                                        currentPlaylistItemPosition++;
-                                        playThePosition(currentPlaylistItemPosition);
+                                    if (currentQueueItemPosition < queueArrayList.size()-1) {
+                                        currentQueueItemPosition++;
+                                        playThePosition(currentQueueItemPosition);
                                     } else playPauseIcon.setImageResource(R.drawable.ic_play_arrow_red);
                                 }
                                 break;
                             case 1:
-                                playThePosition(currentPlaylistItemPosition);
+                                playThePosition(currentQueueItemPosition);
                                 break;
                             case 2:
                                 if (isShuffleModeOn) {
                                     if (shuffledTracks.size()>1) {
-                                        currentPlaylistItemPosition = random.nextInt(shuffledTracks.size());
-                                        shuffledTracks.remove(currentPlaylistItemPosition);
-                                        playThePosition(currentPlaylistItemPosition);
+                                        currentQueueItemPosition = random.nextInt(shuffledTracks.size());
+                                        shuffledTracks.remove(currentQueueItemPosition);
+                                        playThePosition(currentQueueItemPosition);
                                     } else {
-                                        for (int i=0;i<playlistArrayList.size();i++) shuffledTracks.add(i);
-                                        currentPlaylistItemPosition = random.nextInt(shuffledTracks.size());
-                                        shuffledTracks.remove(currentPlaylistItemPosition);
-                                        playThePosition(currentPlaylistItemPosition);
+                                        for (int i = 0; i< queueArrayList.size(); i++) shuffledTracks.add(i);
+                                        currentQueueItemPosition = random.nextInt(shuffledTracks.size());
+                                        shuffledTracks.remove(currentQueueItemPosition);
+                                        playThePosition(currentQueueItemPosition);
                                     }
 
 
                                 } else {
-                                    if (currentPlaylistItemPosition < playlistArrayList.size()-1) {
-                                        currentPlaylistItemPosition++;
-                                        playThePosition(currentPlaylistItemPosition);
+                                    if (currentQueueItemPosition < queueArrayList.size()-1) {
+                                        currentQueueItemPosition++;
+                                        playThePosition(currentQueueItemPosition);
                                     } else {
-                                        currentPlaylistItemPosition = 0;
-                                        playThePosition(currentPlaylistItemPosition);
+                                        currentQueueItemPosition = 0;
+                                        playThePosition(currentQueueItemPosition);
                                     }
                                 }
                                 break;
@@ -457,7 +458,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-          //  currentTrackTextView.setText(playlistArrayList.get(position).getArtist() + " - " + playlistArrayList.get(position).getTitle());
+          //  currentTrackTextView.setText(queueArrayList.get(position).getArtist() + " - " + queueArrayList.get(position).getTitle());
         }
 
     }
@@ -468,7 +469,7 @@ public class MainActivity extends AppCompatActivity {
             shuffleImageView.setImageResource(R.drawable.ic_shuffle_accent_24dp);
             isShuffleModeOn = true;
             shuffledTracks = new ArrayList<>();
-            for (int i=0;i<playlistArrayList.size();i++) shuffledTracks.add(i);
+            for (int i = 0; i< queueArrayList.size(); i++) shuffledTracks.add(i);
 
         } else {
             shuffleImageView.setImageResource(R.drawable.ic_shuffle_accent_faded_24dp);
@@ -480,20 +481,14 @@ public class MainActivity extends AppCompatActivity {
         switch (loopMode) {
             case 0:
                 loopImageView.setImageResource(R.drawable.ic_repeat_one_red_24dp);
-              //  loopModeTextView.setVisibility(View.VISIBLE);
-              // loopModeTextView.setText("track");
                 loopMode = 1;
                 break;
             case 1:
                 loopImageView.setImageResource(R.drawable.ic_repeat_red_24dp);
-             //   loopModeTextView.setVisibility(View.VISIBLE);
-             //   loopModeTextView.setText("playlist");
                 loopMode = 2;
                 break;
             case 2:
                 loopImageView.setImageResource(R.drawable.ic_repeat_red_faded_24dp);
-                loopModeTextView.setVisibility(View.INVISIBLE);
-                loopModeTextView.setText("");
                 loopMode = 0;
                 break;
 
@@ -503,14 +498,138 @@ public class MainActivity extends AppCompatActivity {
 
     public void choosePlaylist(View view) {
         choosePlaylistLinearLayout = findViewById(R.id.choosePlaylistLinearLayout);
-        if (!choosePlaylistLinearLayoutIsVisible) {
-            playlistRecyclerView.setVisibility(View.VISIBLE);
-            choosePlaylistLinearLayoutIsVisible = true;
+
+        if (!choosePlaylistIsVisible) {
+            choosePlaylistLinearLayout.setVisibility(View.VISIBLE);
+            choosePlaylistIsVisible = true;
+            choosePlaylistRecyclerView = findViewById(R.id.choosePlaylistRecyclerView);
+            RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
+            PlaylistsDatabase playlistsDatabase = Room.databaseBuilder(getApplicationContext(),
+                    PlaylistsDatabase.class, "PlaylistsDB").allowMainThreadQueries().build();
+            final long[] playlistIds = playlistsDatabase.getPlaylistDAO().getAllPlaylistId();
+            final ArrayList<Playlist> playlists = new ArrayList<>();
+            for (long id : playlistIds){
+                playlists.add(playlistsDatabase.getPlaylistDAO().getPlaylist(id));
+            }
+            choosePlaylistAdapter = new PlaylistAdapter(playlists, new PlaylistAdapter.OnPlaylistClickListener() {
+                @Override
+                public void onPlaylistClick(int position) {
+                    createQueue(position, playlists);
+                }
+            }, new PlaylistAdapter.OnAddPlaylistClickListener() {
+                @Override
+                public void onAddPlaylistClick(int position) {
+                    addPlaylistToQueue(position, playlists);
+                }
+            }, new PlaylistAdapter.OnEditPlaylistClickListener() {
+                @Override
+                public void onEditPlaylistClick(int position) {
+                    editPlaylist(playlistIds[position]);
+                }
+            }, new PlaylistAdapter.OnDeletePlaylistClickListener() {
+                @Override
+                public void onDeletePlaylistClick(int position) {
+                    deletePlaylist(position, playlists, playlistIds);
+                }
+            });
+            choosePlaylistRecyclerView.setLayoutManager(layoutManager);
+            choosePlaylistRecyclerView.setAdapter(choosePlaylistAdapter);
+
         }
         else {
-            playlistRecyclerView.setVisibility(View.INVISIBLE);
-            choosePlaylistLinearLayoutIsVisible = false;
+            choosePlaylistLinearLayout.setVisibility(View.INVISIBLE);
+            choosePlaylistIsVisible = false;
         }
+
+    }
+
+    private void createQueue(int position, ArrayList<Playlist> playlists) {
+        queueArrayList = playlists.get(position).getTracks();
+        if (queueLayoutManager == null) queueLayoutManager = new LinearLayoutManager(this);
+        queueAdapter = new TrackAdapter(queueArrayList, new TrackAdapter.OnTrackTouchListener() {
+            @Override
+            public void onTrackTouch(View v, MotionEvent event, int position) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN: // нажатие
+                        startx = event.getRawX();
+                        dX = v.getX() - event.getRawX();
+
+                        break;
+                    case MotionEvent.ACTION_MOVE: // движение
+                        if (event.getRawX() > startx) {
+                            v.animate()
+                                    .x(event.getRawX() + dX)
+                                    .setDuration(0)
+                                    .start();
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP: // отпускание
+                        stopx = event.getRawX();
+                        Log.d("mylog", "startx = " + startx + "  stopx = " + stopx);
+                        //   if (stopx < startx) break;
+
+                        if (stopx - startx >  150 && stopx!=0) {
+                            Log.d("mylog", "removed: " + queueArrayList.get(position).getArtist() + "  " + queueArrayList.get(position).getTitle());
+                            queueArrayList.remove(position);
+                            queueRecyclerView.setAdapter(queueAdapter);
+
+                        } else if (stopx != startx) {
+                            v.animate()
+                                    .x(0)
+                                    .setDuration(0)
+                                    .start();
+                        }
+                        else  {
+                            Log.d("mylog", "playtheposition");
+                            currentQueueItemPosition = position;
+                            playThePosition(position);
+
+                        }
+                        break;
+                    case MotionEvent.ACTION_CANCEL:
+                        Log.d("mylog", "action canceled");
+
+                        v.animate()
+                                .x(0)
+                                .setDuration(0)
+                                .start();
+                        break;
+                }
+            }
+        });
+        queueRecyclerView.setLayoutManager(queueLayoutManager);
+        queueRecyclerView.setAdapter(queueAdapter);
+        choosePlaylistLinearLayout.setVisibility(View.INVISIBLE);
+        choosePlaylistIsVisible = false;
+        currentQueueItemPosition = 0;
+        TextView queueTitleTextView = findViewById(R.id.queueTitleTextView);
+        queueTitleTextView.setText(playlists.get(position).getPlaylistTitle());
+        Log.d("title", playlists.get(position).getPlaylistTitle());
+    }
+
+    private void deletePlaylist(int position, final ArrayList<Playlist> playlists, final long[] playlistIds) {
+        PlaylistsDatabase playlistsDatabase = Room.databaseBuilder(getApplicationContext(),
+                PlaylistsDatabase.class, "PlaylistsDB").allowMainThreadQueries().build();
+        playlistsDatabase.getPlaylistDAO().deletePlaylist(playlists.get(position));
+        playlists.remove(position);
+        choosePlaylistAdapter.notifyDataSetChanged();
+    }
+
+    private void editPlaylist(long playlistId) {
+        Intent intent = new Intent(MainActivity.this, CreatePlaylistActivity.class);
+        intent.putExtra("playlistId", playlistId);
+        Log.d("mylog", "playlistId sent = " + playlistId);
+        startActivity(intent);
+    }
+
+    private void addPlaylistToQueue(int position, ArrayList<Playlist> playlists) {
+        Playlist pl = playlists.get(position);
+        for (Track track : pl.getTracks()) {
+            queueArrayList.add(track);
+        }
+        queueAdapter.notifyDataSetChanged();
+        TextView queueTitleTextView = findViewById(R.id.queueTitleTextView);
+        queueTitleTextView.setText("Mixed playlists");
 
     }
 
@@ -518,4 +637,10 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this, CreatePlaylistActivity.class);
         startActivity(intent);
     }
+
+    /*@Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.p
+    }*/
 }
