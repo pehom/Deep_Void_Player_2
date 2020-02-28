@@ -11,21 +11,19 @@
         android:id="@+id/currentTrackTextView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="2"
 
         android:layout_marginLeft="14dp"
-
+        android:layout_marginTop="14dp"
         android:layout_marginRight="14dp"
         android:alpha="0.9"
-        android:textAlignment="center"
-        android:autoSizeTextType="uniform"
+        android:gravity="center"
+        android:textSize="18sp"
         android:textColor="@color/colorAccent"
-        android:singleLine="true"
         android:ellipsize="marquee"
         android:marqueeRepeatLimit="marquee_forever"
-        android:scrollHorizontally="true"
         android:textStyle="bold"
-       />
+        android:singleLine="true" />
     <SeekBar
         android:id="@+id/seekBar"
         android:layout_width="match_parent"
@@ -125,9 +123,10 @@
                 android:layout_weight="7"
                 android:textColor="@color/colorAccent"
                 android:text="Playlists:"
-                android:autoSizeTextType="uniform"
-
-                android:gravity="start" />
+                android:textSize="16sp"
+                android:textAlignment="textStart"
+                android:gravity="center_vertical"
+                tools:ignore="RtlCompat" />
             <ImageView
                 android:id="@+id/createPlaylistImageView"
                 android:layout_width="0dp"
@@ -176,7 +175,7 @@
             android:layout_height="match_parent"
 
             android:text="All tracks"
-            android:textAlignment="center"
+            android:gravity="center"
             android:textColor="@color/colorAccent"
             android:autoSizeTextType="uniform"
             android:textStyle="bold"
